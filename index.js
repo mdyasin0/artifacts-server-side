@@ -27,20 +27,28 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 // Legacy-Vault  Artifacts
-const Artifactscollection = client.db('Legacy-Vault').collection('Artifacts');
+const Artifactscollection1 = client.db('Legacy-Vault').collection('Artifacts');
+const Artifactscollection2 = client.db('Legacy-Vault').collection('Historical Timeline');
 
-app.get('/artifacts' ,async (req,res)=>{
-    const cursor = Artifactscollection.find();
+app.get('/historical_timeline' ,async (req,res)=>{
+    const cursor = Artifactscollection2.find();
     const result = await cursor.toArray();
     res.send(result)
 })
 
-const { ObjectId } = require('mongodb'); // খুব গুরুত্বপূর্ণ!
+
+app.get('/artifacts' ,async (req,res)=>{
+    const cursor = Artifactscollection1.find();
+    const result = await cursor.toArray();
+    res.send(result)
+})
+
+const { ObjectId } = require('mongodb'); 
 
 app.get('/artifacts/:id', async (req, res) => {
   const id = req.params.id;
   const query = { _id: new ObjectId(id) };
-  const artifact = await Artifactscollection.findOne(query);
+  const artifact = await Artifactscollection1.findOne(query);
   res.send(artifact);
 });
 
