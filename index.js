@@ -43,6 +43,47 @@ app.get('/artifacts' ,async (req,res)=>{
     res.send(result)
 })
 
+// like oparetion start
+
+app.patch('/artifacts/like/:id', async (req, res) => {
+  const artifactId = req.params.id;
+  const userEmail = req.body.email;
+
+  if (!userEmail) {
+    return res.status(400).send({ message: 'Email is required' });
+  }
+
+  const query = { _id: new ObjectId(artifactId) };
+  const artifact = await Artifactscollection1.findOne(query);
+
+  if (!artifact) {
+    return res.status(404).send({ message: 'Artifact not found' });
+  }
+
+  const alreadyLiked = artifact.liked_by?.includes(userEmail);
+
+  let updateDoc;
+  if (alreadyLiked) {
+    // Remove like
+    updateDoc = {
+      $pull: { liked_by: userEmail }
+    };
+  } else {
+    // Add like
+    updateDoc = {
+      $addToSet: { liked_by: userEmail }
+    };
+  }
+
+  const result = await Artifactscollection1.updateOne(query, updateDoc);
+  res.send(result);
+});
+
+
+
+// like oparetion end
+
+
 const { ObjectId } = require('mongodb'); 
 
 app.get('/artifacts/:id', async (req, res) => {
