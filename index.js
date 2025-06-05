@@ -30,6 +30,32 @@ async function run() {
 const Artifactscollection1 = client.db('Legacy-Vault').collection('Artifacts');
 const Artifactscollection2 = client.db('Legacy-Vault').collection('Historical Timeline');
 
+
+
+
+
+app.post("/addartifacts", async (req, res) => {
+      try {
+        const newArtifact = req.body;
+        const result = await Artifactscollection1.insertOne(newArtifact);
+        res.status(201).json({
+          success: true,
+          message: "Artifact added successfully",
+          insertedId: result.insertedId,
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          message: "Failed to add artifact",
+          error: error.message,
+        });
+      }
+    });
+
+
+
+
+
 app.get('/historical_timeline' ,async (req,res)=>{
     const cursor = Artifactscollection2.find();
     const result = await cursor.toArray();
