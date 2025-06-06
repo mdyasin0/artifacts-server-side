@@ -4,7 +4,7 @@ const cors = require('cors');
 const app =express();
 const port = process.env.PORT || 3000 ;
 const { MongoClient, ServerApiVersion } = require('mongodb');
-
+const { ObjectId } = require('mongodb');
 app.use(cors());
 app.use(express.json());
 
@@ -134,9 +134,53 @@ app.patch('/artifacts/like/:id', async (req, res) => {
 
 // like oparetion end
 
+// for update form show data 
 
-const { ObjectId } = require('mongodb'); 
+app.get('/update/:id', async (req, res) => {
+  const id = req.params.id;
+  const query = { _id: new ObjectId(id) };
+  const artifact = await Artifactscollection1.findOne(query);
+  res.send(artifact);
+});
 
+//  update form for update data 
+
+
+app.patch('/update/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const updatedData = req.body;
+
+    const filter = { _id: new ObjectId(id) };
+    const updateDoc = {
+      $set: updatedData,
+    };
+
+    const result = await Artifactscollection1.updateOne(filter, updateDoc);
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Artifact not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Artifact updated successfully',
+      modifiedCount: result.modifiedCount,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update artifact',
+      error: error.message,
+    });
+  }
+});
+
+ 
+//for  home details
 app.get('/artifacts/:id', async (req, res) => {
   const id = req.params.id;
   const query = { _id: new ObjectId(id) };
