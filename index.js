@@ -32,7 +32,7 @@ const Artifactscollection2 = client.db('Legacy-Vault').collection('Historical Ti
 
 
 
-
+// Artifacts form
 
 app.post("/addartifacts", async (req, res) => {
       try {
@@ -53,7 +53,32 @@ app.post("/addartifacts", async (req, res) => {
     });
 
 
+// delete operation for artifacts
+app.delete('/delete/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const query = { _id: new ObjectId(id) };
+    const result = await Artifactscollection1.deleteOne(query);
 
+    if (result.deletedCount === 1) {
+      res.status(200).json({
+        success: true,
+        message: 'Artifact deleted successfully',
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        message: 'Artifact not found',
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete artifact',
+      error: error.message,
+    });
+  }
+});
 
 
 app.get('/historical_timeline' ,async (req,res)=>{
