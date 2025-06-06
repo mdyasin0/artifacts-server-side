@@ -2,13 +2,36 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const app =express();
+const jwt = require('jsonwebtoken');
+const cookieparser = require('cookie-parser');
 const port = process.env.PORT || 3000 ;
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const { ObjectId } = require('mongodb');
-app.use(cors());
+app.use(cors({
+  origin:['http://localhost:5173'],
+  credentials:true
+
+}));
 app.use(express.json());
+app.use(cookieparser());
+
+const verifyuser = (req,res,next)=>{
+  const token =req?.cookies?.token;
+  console.log('cookie in the middlewire', token);
+  if(!token){
+    return res.status(401).send({massage:'unauthorized access'})
+  }
+jwt.verify(token,process.env.jwt_access_secret,(err,decoded)=>{
+  if(err){
+    return res.status(401).send({massage:'unauthorized access'})
+  }
+  req.decoded=decoded;
+  next();
+} )
 
 
+
+}
 
 
 const uri = `mongodb+srv://${process.env.user}:${process.env.db_pass}@cluster0.vbsgl0h.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -30,13 +53,36 @@ async function run() {
 const Artifactscollection1 = client.db('Legacy-Vault').collection('Artifacts');
 const Artifactscollection2 = client.db('Legacy-Vault').collection('Historical Timeline');
 
+// jwt api
+
+app.post('/jwt', async(req, res)=>{
+  const {email} = req.body;
+const user = {email}
+const token = jwt.sign(user,process.env.jwt_access_secret,{expiresIn:'1h'});
+
+res.cookie('token',token,{
+  httpOnly:true,
+  secure:false,
+})
+
+res.send({success:true})
+
+
+})
+
 
 
 // Artifacts form
 
-app.post("/addartifacts", async (req, res) => {
+app.post("/addartifacts",verifyuser, async (req, res) => {
       try {
         const newArtifact = req.body;
+        const email=req.body.email;
+
+        
+if(email !== req.decoded.email){
+      return res.status(403).send({massage:'forbidden access'})
+    }
         const result = await Artifactscollection1.insertOne(newArtifact);
         res.status(201).json({
           success: true,
@@ -54,8 +100,13 @@ app.post("/addartifacts", async (req, res) => {
 
 
 // delete operation for artifacts
-app.delete('/delete/:id', async (req, res) => {
+app.delete('/delete/:id', verifyuser,async (req, res) => {
   try {
+    
+const email=req.decoded.email;
+if(email !== req.decoded.email){
+      return res.status(403).send({massage:'forbidden access'})
+    }
     const id = req.params.id;
     const query = { _id: new ObjectId(id) };
     const result = await Artifactscollection1.deleteOne(query);
@@ -81,14 +132,21 @@ app.delete('/delete/:id', async (req, res) => {
 });
 
 
-app.get('/historical_timeline' ,async (req,res)=>{
+app.get('/historical_timeline' ,verifyuser,async (req,res)=>{
     const cursor = Artifactscollection2.find();
+    console.log('inside timline',req.cookies);
+    const email=req.decoded.email;
+
+    if(email !== req.decoded.email){
+      return res.status(403).send({massage:'forbidden access'})
+    }
     const result = await cursor.toArray();
     res.send(result)
 })
 
 
-app.get('/artifacts' ,async (req,res)=>{
+app.get('/artifacts' ,verifyuser ,async (req,res)=>{
+  
     const cursor = Artifactscollection1.find();
     const result = await cursor.toArray();
     res.send(result)
@@ -96,9 +154,13 @@ app.get('/artifacts' ,async (req,res)=>{
 
 // like oparetion start
 
-app.patch('/artifacts/like/:id', async (req, res) => {
+app.patch('/artifacts/like/:id',verifyuser, async (req, res) => {
   const artifactId = req.params.id;
   const userEmail = req.body.email;
+  
+if(userEmail !== req.decoded.email){
+      return res.status(403).send({massage:'forbidden access'})
+    }
 
   if (!userEmail) {
     return res.status(400).send({ message: 'Email is required' });
@@ -136,7 +198,11 @@ app.patch('/artifacts/like/:id', async (req, res) => {
 
 // for update form show data 
 
-app.get('/update/:id', async (req, res) => {
+app.get('/update/:id',verifyuser , async (req, res) => {
+  const email=req.decoded.email;
+  if(email !== req.decoded.email){
+      return res.status(403).send({massage:'forbidden access'})
+    }
   const id = req.params.id;
   const query = { _id: new ObjectId(id) };
   const artifact = await Artifactscollection1.findOne(query);
@@ -146,8 +212,12 @@ app.get('/update/:id', async (req, res) => {
 //  update form for update data 
 
 
-app.patch('/update/:id', async (req, res) => {
+app.patch('/update/:id',verifyuser , async (req, res) => {
   try {
+    const email=req.body.email;
+    if(email !== req.decoded.email){
+      return res.status(403).send({massage:'forbidden access'})
+    }
     const id = req.params.id;
     const updatedData = req.body;
 
@@ -181,7 +251,8 @@ app.patch('/update/:id', async (req, res) => {
 
  
 //for  home details
-app.get('/artifacts/:id', async (req, res) => {
+app.get('/artifacts/:id',verifyuser ,async (req, res) => {
+
   const id = req.params.id;
   const query = { _id: new ObjectId(id) };
   const artifact = await Artifactscollection1.findOne(query);
