@@ -145,6 +145,119 @@ async function run() {
       res.send(result);
     });
 
+    const CommentsCollection = client.db("Legacy-Vault").collection("Comments");
+    //  Add Comment
+    app.post("/comments", async (req, res) => {
+      try {
+        const { artifactId, name, email, image, text, date } = req.body;
+
+        if (!artifactId || !name || !email || !text) {
+          return res.status(400).send({ message: "Missing required fields" });
+        }
+
+        const newComment = {
+          artifactId,
+          name,
+          email,
+          image,
+          text,
+          date: new Date(date),
+        };
+
+        const result = await CommentsCollection.insertOne(newComment);
+        res.status(201).send({
+          success: true,
+          message: "Comment added successfully",
+          insertedId: result.insertedId,
+        });
+      } catch (error) {
+        res.status(500).send({
+          success: false,
+          message: "Failed to add comment",
+          error: error.message,
+        });
+      }
+    });
+    // Get Comments by Artifact ID
+    app.get("/comments/:artifactId", async (req, res) => {
+      try {
+        const artifactId = req.params.artifactId;
+        const query = { artifactId: artifactId };
+        const comments = await CommentsCollection.find(query)
+          .sort({ date: -1 })
+          .toArray();
+        res.send(comments);
+      } catch (error) {
+        res.status(500).send({
+          success: false,
+          message: "Failed to fetch comments",
+          error: error.message,
+        });
+      }
+    });
+
+    //  Delete comment (No JWT)
+    app.delete("/comments/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const { email } = req.body; // frontend থেকে email পাঠাতে হবে
+
+        if (!email)
+          return res
+            .status(400)
+            .send({ success: false, message: "Email required" });
+
+        const result = await CommentsCollection.deleteOne({
+          _id: new ObjectId(id),
+          email,
+        });
+
+        if (result.deletedCount === 1) {
+          res.status(200).send({ success: true, message: "Comment deleted" });
+        } else {
+          res
+            .status(404)
+            .send({
+              success: false,
+              message: "Comment not found or not your comment",
+            });
+        }
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
+    //  Update comment (No JWT)
+    app.patch("/comments/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const { email, text } = req.body;
+
+        if (!email)
+          return res
+            .status(400)
+            .send({ success: false, message: "Email required" });
+
+        const result = await CommentsCollection.updateOne(
+          { _id: new ObjectId(id), email },
+          { $set: { text } }
+        );
+
+        if (result.matchedCount === 1) {
+          res.status(200).send({ success: true, message: "Comment updated" });
+        } else {
+          res
+            .status(404)
+            .send({
+              success: false,
+              message: "Comment not found or not your comment",
+            });
+        }
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
     app.get("/artifacts", async (req, res) => {
       const cursor = Artifactscollection1.find();
       const result = await cursor.toArray();
@@ -246,7 +359,7 @@ async function run() {
     });
 
     //for  home details
-    app.get("/artifacts/:id",  async (req, res) => {
+    app.get("/artifacts/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const artifact = await Artifactscollection1.findOne(query);
