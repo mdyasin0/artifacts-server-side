@@ -81,6 +81,89 @@ async function run() {
       res.send({ success: true });
     });
 
+    // MongoDB Collection
+    const NotesCollection = client.db("Legacy-Vault").collection("Notes");
+
+    //  Save Note (No JWT)
+    app.post("/notes", async (req, res) => {
+      const { email, title, content } = req.body;
+
+      if (!email || !title || !content) {
+        return res.status(400).send({ message: "All fields are required!" });
+      }
+
+      const newNote = {
+        email,
+        title,
+        content,
+        date: new Date(),
+      };
+
+      try {
+        const result = await NotesCollection.insertOne(newNote);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: "Failed to save note!" });
+      }
+    });
+
+    //  Get All Notes (No JWT)
+    app.get("/notes", async (req, res) => {
+      try {
+        const notes = await NotesCollection.find({})
+          .sort({ date: -1 })
+          .toArray();
+        res.send(notes);
+      } catch (error) {
+        res.status(500).send({ message: "Failed to fetch notes!" });
+      }
+    });
+
+    // Get Single Note
+    app.get("/notes/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const note = await NotesCollection.findOne({ _id: new ObjectId(id) });
+        if (!note) return res.status(404).send({ message: "Note not found" });
+        res.send(note);
+      } catch (error) {
+        res.status(500).send({ message: "Failed to fetch note!" });
+      }
+    });
+
+    //  Update Note
+    app.patch("/notes/:id", async (req, res) => {
+      const id = req.params.id;
+      const { title, content } = req.body;
+
+      if (!title || !content) {
+        return res.status(400).send({ message: "All fields required!" });
+      }
+
+      try {
+        const result = await NotesCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { title, content } }
+        );
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: "Failed to update note!" });
+      }
+    });
+
+    //  Delete Note
+    app.delete("/notes/:id", async (req, res) => {
+      const id = req.params.id;
+      try {
+        const result = await NotesCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: "Failed to delete note!" });
+      }
+    });
+
     // Artifacts form
 
     app.post("/addartifacts", verifyuser, async (req, res) => {
@@ -215,12 +298,10 @@ async function run() {
         if (result.deletedCount === 1) {
           res.status(200).send({ success: true, message: "Comment deleted" });
         } else {
-          res
-            .status(404)
-            .send({
-              success: false,
-              message: "Comment not found or not your comment",
-            });
+          res.status(404).send({
+            success: false,
+            message: "Comment not found or not your comment",
+          });
         }
       } catch (error) {
         res.status(500).send({ success: false, message: error.message });
@@ -246,12 +327,10 @@ async function run() {
         if (result.matchedCount === 1) {
           res.status(200).send({ success: true, message: "Comment updated" });
         } else {
-          res
-            .status(404)
-            .send({
-              success: false,
-              message: "Comment not found or not your comment",
-            });
+          res.status(404).send({
+            success: false,
+            message: "Comment not found or not your comment",
+          });
         }
       } catch (error) {
         res.status(500).send({ success: false, message: error.message });
