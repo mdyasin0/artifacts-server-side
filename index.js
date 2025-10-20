@@ -246,7 +246,7 @@ async function run() {
     });
 
     //for  home details
-    app.get("/artifacts/:id", verifyuser, async (req, res) => {
+    app.get("/artifacts/:id",  async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const artifact = await Artifactscollection1.findOne(query);
